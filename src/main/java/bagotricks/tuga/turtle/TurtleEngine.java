@@ -379,7 +379,9 @@ public class TurtleEngine implements Engine {
     @Override
     public void reset() {
         synchronized (this) {
-            drawingBuffer.flush();
+            if (drawingBuffer != null) {
+                drawingBuffer.flush();
+            }
             drawingBuffer = null;
             turtle.reset();
             drawing.reset();
@@ -412,6 +414,10 @@ public class TurtleEngine implements Engine {
             paused = true;
         }
         return paused;
+    }
+
+    public Drawing getDrawing() {
+        return drawing;
     }
 
 }
