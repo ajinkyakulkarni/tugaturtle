@@ -30,6 +30,7 @@ public class TurtleEngine implements Engine {
 
     private final Callback color = new Callback() {
 
+        @Override
         public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
             if (args.length > 0) {
                 float red, green, blue;
@@ -54,6 +55,7 @@ public class TurtleEngine implements Engine {
             return RubyArray.newArray(recv.getRuntime(), rubyRgb);
         }
 
+        @Override
         public Arity getArity() {
             return Arity.singleArgument();
         }
@@ -72,12 +74,14 @@ public class TurtleEngine implements Engine {
 
     private final Callback jump = new Callback() {
 
+        @Override
         public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
             double distance = convertToDouble(args[0]);
             move(distance, false);
             return null;
         }
 
+        @Override
         public Arity getArity() {
             return Arity.singleArgument();
         }
@@ -90,11 +94,13 @@ public class TurtleEngine implements Engine {
 
     private final Callback pen = new Callback() {
 
+        @Override
         public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
             turtle.penDown = args[0].isTrue();
             return null;
         }
 
+        @Override
         public Arity getArity() {
             return Arity.singleArgument();
         }
@@ -105,10 +111,11 @@ public class TurtleEngine implements Engine {
 
     private final Callback turn = new Callback() {
 
+        @Override
         public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
             double angle = convertToDouble(args[0]);
             angle += turtle.angle;
-			// double turns = angle / 360;
+            // double turns = angle / 360;
             // turns = turns < 0 ? Math.
             // TODO Finish normalizing angle.
             turtle.angle = angle;
@@ -116,6 +123,7 @@ public class TurtleEngine implements Engine {
             return null;
         }
 
+        @Override
         public Arity getArity() {
             return Arity.singleArgument();
         }
@@ -126,12 +134,14 @@ public class TurtleEngine implements Engine {
 
     private final Callback walk = new Callback() {
 
+        @Override
         public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
             double distance = convertToDouble(args[0]);
             move(distance, turtle.penDown);
             return null;
         }
 
+        @Override
         public Arity getArity() {
             return Arity.singleArgument();
         }
@@ -141,6 +151,7 @@ public class TurtleEngine implements Engine {
     public TurtleEngine() {
         // Get things preloaded.
         new Thread() {
+            @Override
             public void run() {
                 Ruby.getDefaultInstance().evalScript("");
             }
@@ -151,7 +162,7 @@ public class TurtleEngine implements Engine {
     private RuntimeException buildException(RaiseException e) {
         String message = e.getMessage();
         int lineNumber = -1;
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
         buffer.append("\n\nStack trace:\n");
         IRubyObject backtrace = e.getException().backtrace();
         for (String rubyFrame : convertToList(String.class, backtrace)) {
@@ -178,6 +189,7 @@ public class TurtleEngine implements Engine {
         return exception;
     }
 
+    @Override
     public void execute(String name, String script) {
         reset();
         onStep();
@@ -305,6 +317,7 @@ public class TurtleEngine implements Engine {
         }
     }
 
+    @Override
     public void paintCanvas(Component component, Graphics graphics) {
         Graphics2D g = (Graphics2D) graphics.create();
         try {
@@ -363,6 +376,7 @@ public class TurtleEngine implements Engine {
         }
     }
 
+    @Override
     public void reset() {
         synchronized (this) {
             drawingBuffer.flush();
@@ -372,6 +386,7 @@ public class TurtleEngine implements Engine {
         }
     }
 
+    @Override
     public void setListener(RunListener listener) {
         this.listener = listener;
     }
@@ -379,6 +394,7 @@ public class TurtleEngine implements Engine {
     /**
      * Stops the next thread that calls onStep.
      */
+    @Override
     public void stop() {
         synchronized (this) {
             stopNext = true;
@@ -387,6 +403,7 @@ public class TurtleEngine implements Engine {
         }
     }
 
+    @Override
     public synchronized boolean togglePause() {
         if (paused) {
             paused = false;
