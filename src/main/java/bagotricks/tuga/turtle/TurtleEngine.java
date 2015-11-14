@@ -88,9 +88,9 @@ public class TurtleEngine implements Engine {
 
     };
 
-    public RunListener listener;
+    private RunListener listener;
 
-    public boolean paused;
+    private boolean paused;
 
     private final Callback pen = new Callback() {
 
@@ -130,7 +130,7 @@ public class TurtleEngine implements Engine {
 
     };
 
-    public Turtle turtle = new Turtle();
+    private Turtle turtle = new Turtle();
 
     private final Callback walk = new Callback() {
 
