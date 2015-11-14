@@ -1,68 +1,37 @@
 package bagotricks.tuga.turtle;
 
-import java.awt.*;
-import java.awt.geom.*;
-import java.awt.image.*;
-import java.io.*;
+import bagotricks.tuga.Engine;
+import bagotricks.tuga.RunListener;
+import bagotricks.tuga.StopException;
+import bagotricks.tuga.Thrower;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.ImageCapabilities;
+import java.awt.RenderingHints;
+import java.awt.geom.GeneralPath;
+import java.awt.geom.Line2D;
+import java.awt.image.VolatileImage;
+import java.io.StringReader;
 import java.util.List;
-import java.util.regex.*;
-
-import org.jruby.*;
-import org.jruby.exceptions.*;
-import org.jruby.runtime.*;
-import org.jruby.runtime.builtin.*;
-import org.jruby.runtime.callback.*;
-
-import bagotricks.tuga.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+import org.jruby.exceptions.RaiseException;
+import org.jruby.runtime.builtin.IRubyObject;
 
 public class TurtleEngine implements Engine {
 
     private static final Pattern RUBY_FRAME_PATTERN = Pattern.compile("([^:]*):(\\d*)(?::((?:in `([^']*)')|.*))?");
 
-    private static double convertToDouble(IRubyObject doubleObject) {
-        return doubleObject.convertToFloat().getDoubleValue();
-    }
+    private final Turtle turtle;
 
-    @SuppressWarnings("unchecked")
-    private static <C> List<C> convertToList(Class<C> clazz, IRubyObject arrayObject) {
-        return arrayObject.convertToArray();
-    }
-
-    private final Callback color = new Callback() {
-
-        @Override
-        public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
-            if (args.length > 0) {
-                float red, green, blue;
-                if (args.length == 1) {
-                    // Should be an array of RGB.
-                    List<Number> numbers = convertToList(Number.class, args[0]);
-                    red = numbers.get(0).floatValue();
-                    green = numbers.get(1).floatValue();
-                    blue = numbers.get(2).floatValue();
-                } else {
-                    red = (float) convertToDouble(args[0]);
-                    green = (float) convertToDouble(args[1]);
-                    blue = (float) convertToDouble(args[2]);
-                }
-                turtle.penColor = new Color(red / 100, green / 100, blue / 100);
-            }
-            float[] rgb = turtle.penColor.getRGBComponents(null);
-            RubyFloat[] rubyRgb = new RubyFloat[3];
-            for (int i = 0; i < 3; i++) {
-                rubyRgb[i] = RubyFloat.newFloat(recv.getRuntime(), rgb[i]);
-            }
-            return RubyArray.newArray(recv.getRuntime(), rubyRgb);
-        }
-
-        @Override
-        public Arity getArity() {
-            return Arity.singleArgument();
-        }
-
-    };
-
-    private Drawing drawing = new Drawing();
+    private final Drawing drawing;
 
     /**
      * provides the ability to draw incrementally rather than redrawing the
@@ -72,93 +41,160 @@ public class TurtleEngine implements Engine {
 
     private int drawnStepCount;
 
-    private final Callback jump = new Callback() {
-
-        @Override
-        public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
-            double distance = convertToDouble(args[0]);
-            move(distance, false);
-            return null;
-        }
-
-        @Override
-        public Arity getArity() {
-            return Arity.singleArgument();
-        }
-
-    };
-
     private RunListener listener;
 
     private boolean paused;
 
-    private final Callback pen = new Callback() {
-
-        @Override
-        public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
-            turtle.penDown = args[0].isTrue();
-            return null;
-        }
-
-        @Override
-        public Arity getArity() {
-            return Arity.singleArgument();
-        }
-
-    };
-
     private boolean stopNext;
 
-    private final Callback turn = new Callback() {
-
-        @Override
-        public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
-            double angle = convertToDouble(args[0]);
-            angle += turtle.angle;
-            // double turns = angle / 360;
-            // turns = turns < 0 ? Math.
-            // TODO Finish normalizing angle.
-            turtle.angle = angle;
-            onStep();
-            return null;
+    public float[] color(float[] val) {
+        if (val.length == 3) {
+            return color3(val[0], val[1], val[2]);
+        } else {
+            throw new RuntimeException("Expected array with length 3 but array had length " + val.length);
         }
+    }
 
-        @Override
-        public Arity getArity() {
-            return Arity.singleArgument();
-        }
+    public float[] color3(float red, float green, float blue) {
+        turtle.penColor = new Color(red / 100, green / 100, blue / 100);
+        return new float[]{red, green, blue};
+    }
 
-    };
+    public void jump(double distance) {
+        move(distance, false);
+    }
 
-    private Turtle turtle = new Turtle();
+    public void pen(boolean down) {
+        turtle.penDown = down;
+    }
 
-    private final Callback walk = new Callback() {
+    public void turn(double angle) {
+        angle += turtle.angle;
+        // double turns = angle / 360;
+        // turns = turns < 0 ? Math.
+        // TODO Finish normalizing angle.
+        turtle.angle = angle;
+        onStep();
+    }
 
-        @Override
-        public IRubyObject execute(IRubyObject recv, IRubyObject[] args) {
-            double distance = convertToDouble(args[0]);
-            move(distance, turtle.penDown);
-            return null;
-        }
+    public void walk(double distance) {
+        move(distance, turtle.penDown);
+    }
 
-        @Override
-        public Arity getArity() {
-            return Arity.singleArgument();
-        }
+    private final ScriptEngine engine;
 
-    };
+    /**
+     * Latch to ensure the JRuby engine is initialized before scripts can
+     * execute.
+     */
+    private final CountDownLatch engineReadySignal;
 
     public TurtleEngine() {
-        // Get things preloaded.
+        System.setProperty("org.jruby.embed.localvariable.behavior", "persistent");
+        engineReadySignal = new CountDownLatch(1);
+        this.drawing = new Drawing();
+        this.turtle = new Turtle();
+        ScriptEngineManager manager = new ScriptEngineManager();
+        engine = manager.getEngineByName("jruby");
+        // Initialize the engine in a separate thread to hide the startup time.
         new Thread() {
             @Override
             public void run() {
-                Ruby.getDefaultInstance().evalScript("");
+                long start = System.currentTimeMillis();
+                try {
+                    createRubyApi();
+                } catch (ScriptException ex) {
+                }
+                final long elapsed = System.currentTimeMillis() - start;
+                System.out.println(String.format("JRuby initialized in %d ms", elapsed));
+                engineReadySignal.countDown();
             }
         }.start();
     }
 
+    private void createRubyApi() throws ScriptException {
+        // Insert the TurtleEngine into JRuby.
+        engine.put("$tuga", this);
+
+        // Colors
+        engine.eval("def aqua; [0, 100, 100] end");
+        engine.eval("def black; [0, 0, 0] end");
+        engine.eval("def blue; [0, 0, 100] end");
+        engine.eval("def brown; [74, 56, 56] end"); // "saddlebrown" by CSS 3 specs - their brown is very red and dark.
+        engine.eval("def gray; [50, 50, 50] end");
+        engine.eval("def green; [0, 50, 0] end");
+        engine.eval("def fuschia; [100, 0, 100] end");
+        engine.eval("def lime; [0, 100, 0] end");
+        engine.eval("def maroon; [50, 0, 0] end");
+        engine.eval("def navy; [0, 0, 50] end");
+        engine.eval("def olive; [50, 50, 0] end");
+        engine.eval("def orange; [100, 65, 0] end");
+        engine.eval("def purple; [50, 0, 50] end");
+        engine.eval("def red; [100, 0, 0] end");
+        engine.eval("def silver; [75, 75, 75] end");
+        engine.eval("def tan; [82, 71, 55] end");
+        engine.eval("def teal; [0, 50, 50] end");
+        engine.eval("def white; [100, 100, 100] end");
+        engine.eval("def yellow; [100, 100, 0] end");
+        // Directions
+        engine.eval("def around; 180 end");
+        engine.eval("def left; 90 end");
+        engine.eval("def right; -90 end");
+        // Pen positions
+        engine.eval("def down; true end");
+        engine.eval("def up; false end");
+
+        // Bind the Java operations to simple Ruby methods
+        engine.eval("def color(val); $tuga.color(val) end");
+        engine.eval("def color3(r,b,g); $tuga.color3(r,b,g) end");
+        engine.eval("def jump(dist); $tuga.jump(dist) end");
+        engine.eval("def pen(down); $tuga.pen(down) end");
+        engine.eval("def turn(angle); $tuga.turn(angle) end");
+        engine.eval("def walk(dist); $tuga.walk(dist) end");
+    }
+
+    @Override
+    public void execute(String name, String script) {
+        try {
+            engineReadySignal.await();
+        } catch (InterruptedException ex) {
+        }
+        reset();
+        onStep();
+
+        try {
+            engine.eval(new StringReader(script));
+        } catch (ScriptException ex) {
+            if (ex.getCause() != null) {
+                Throwable cause = ex;
+                while (cause.getCause() != null) {
+                    cause = cause.getCause();
+                }
+                if (cause instanceof StopException) {
+                    // This was triggered on purpose. Expose it.
+                    throw (StopException) cause;
+                }
+            }
+            throw buildException(ex);
+        } finally {
+            paused = false;
+            stopNext = false;
+        }
+    }
+
     @SuppressWarnings("unchecked")
+    private RuntimeException buildException(ScriptException e) {
+        Throwable cause = e;
+        while (cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        if (cause instanceof RaiseException) {
+            // This was triggered on purpose. Expose it.
+            return buildException((RaiseException) cause);
+        }
+        return new RuntimeException(cause);
+    }
+
     private RuntimeException buildException(RaiseException e) {
         String message = e.getMessage();
         int lineNumber = -1;
@@ -187,73 +223,6 @@ public class TurtleEngine implements Engine {
         }
         RuntimeException exception = new RuntimeException("Error: " + message + (lineNumber >= 1 ? " on line " + lineNumber : "") + buffer.toString(), e);
         return exception;
-    }
-
-    @Override
-    public void execute(String name, String script) {
-        reset();
-        onStep();
-        IRuby ruby = Ruby.getDefaultInstance();
-        // ruby.setSafeLevel(4);
-        initCommands(ruby);
-        try {
-            ruby.loadScript(name, new StringReader(script), false);
-        } catch (RaiseException e) {
-            if (e.getCause() != null) {
-                Throwable cause = e;
-                while (cause.getCause() != null) {
-                    cause = cause.getCause();
-                }
-                if (cause instanceof StopException) {
-                    // This was triggered on purpose. Expose it.
-                    throw (StopException) cause;
-                }
-            }
-            System.err.println(e.getException().backtrace());
-            System.err.println(e.getMessage());
-            e.printStackTrace();
-            throw buildException(e);
-        } finally {
-            paused = false;
-            stopNext = false;
-        }
-    }
-
-    private void initCommands(IRuby ruby) {
-        RubyModule object = ruby.getObject();
-        // Colors
-        ruby.evalScript("def aqua; [0, 100, 100] end");
-        ruby.evalScript("def black; [0, 0, 0] end");
-        ruby.evalScript("def blue; [0, 0, 100] end");
-        ruby.evalScript("def brown; [74, 56, 56] end"); // "saddlebrown" by CSS 3 specs - their brown is very red and dark.
-        ruby.evalScript("def gray; [50, 50, 50] end");
-        ruby.evalScript("def green; [0, 50, 0] end");
-        ruby.evalScript("def fuschia; [100, 0, 100] end");
-        ruby.evalScript("def lime; [0, 100, 0] end");
-        ruby.evalScript("def maroon; [50, 0, 0] end");
-        ruby.evalScript("def navy; [0, 0, 50] end");
-        ruby.evalScript("def olive; [50, 50, 0] end");
-        ruby.evalScript("def orange; [100, 65, 0] end");
-        ruby.evalScript("def purple; [50, 0, 50] end");
-        ruby.evalScript("def red; [100, 0, 0] end");
-        ruby.evalScript("def silver; [75, 75, 75] end");
-        ruby.evalScript("def tan; [82, 71, 55] end");
-        ruby.evalScript("def teal; [0, 50, 50] end");
-        ruby.evalScript("def white; [100, 100, 100] end");
-        ruby.evalScript("def yellow; [100, 100, 0] end");
-        // Directions
-        ruby.evalScript("def around; 180 end");
-        ruby.evalScript("def left; 90 end");
-        ruby.evalScript("def right; -90 end");
-        // Pen positions
-        ruby.evalScript("def down; true end");
-        ruby.evalScript("def up; false end");
-        // Java methods
-        object.defineMethod("color", color);
-        object.defineMethod("jump", jump);
-        object.defineMethod("pen", pen);
-        object.defineMethod("turn", turn);
-        object.defineMethod("walk", walk);
     }
 
     private void initDrawingBuffer(Component component) {
@@ -418,6 +387,19 @@ public class TurtleEngine implements Engine {
 
     public Drawing getDrawing() {
         return drawing;
+    }
+
+    /**
+     * Converts a Ruby array to a Java List of type clazz.
+     *
+     * @param <C>
+     * @param clazz
+     * @param arrayObject
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    private static <C> List<C> convertToList(Class<C> clazz, IRubyObject arrayObject) {
+        return arrayObject.convertToArray();
     }
 
 }
