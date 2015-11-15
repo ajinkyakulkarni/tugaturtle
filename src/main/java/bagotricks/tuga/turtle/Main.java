@@ -19,6 +19,7 @@ public class Main {
 			MainUi ui = new MainUi();
 			ui.firstContent = Examples.getContent("Angle Patterns");
 			ui.engine = new TurtleEngine();
+			ui.engine.init();
 			ui.examples = Examples.getAll();
 			ui.icon = ImageIO.read(Main.class.getResource("turtle128.png"));
 			ui.id = "Tuga Turtle";

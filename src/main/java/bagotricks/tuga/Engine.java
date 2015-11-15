@@ -5,16 +5,17 @@ import java.awt.Graphics;
 
 public interface Engine {
 
-	public abstract void execute(String name, String script);
+    void init();
 
-	public abstract void paintCanvas(Component component, Graphics graphics);
+    void execute(String name, String script);
 
-	public abstract void reset();
+    void paintCanvas(Component component, Graphics graphics);
 
-	public abstract void setListener(RunListener listener);
+    void reset();
 
-	public abstract void stop();
+    void setListener(RunListener listener);
 
-	public abstract boolean togglePause();
+    void stop();
 
+    boolean togglePause();
 }
