@@ -35,6 +35,32 @@ public class TurtleEngine implements Engine, Tuga {
 
     private boolean stopNext;
 
+    private final ScriptRunner runner;
+
+    public TurtleEngine() {
+        this.drawing = new Drawing();
+        this.turtle = new Turtle();
+        runner = new RubyScriptRunner();
+    }
+
+    @Override
+    public void init() {
+        runner.init(this);
+    }
+
+    @Override
+    public void execute(String name, String script) {
+        reset();
+        onStep();
+
+        try {
+            runner.execute(name, script);
+        } finally {
+            paused = false;
+            stopNext = false;
+        }
+    }
+
     @Override
     public float[] color(float[] val) {
         if (val.length == 3) {
@@ -73,65 +99,6 @@ public class TurtleEngine implements Engine, Tuga {
     @Override
     public void walk(double distance) {
         move(distance, turtle.penDown);
-    }
-
-    private ScriptRunner runner;
-    
-    public TurtleEngine() {
-        this.drawing = new Drawing();
-        this.turtle = new Turtle();
-        runner = new RubyScriptRunner();
-    }
-    
-    @Override
-    public void init() {
-        runner.init(this);
-    }
-
-    @Override
-    public void execute(String name, String script) {
-        reset();
-        onStep();
-
-        try {
-            runner.execute(name, script);
-        } finally {
-            paused = false;
-            stopNext = false;
-        }
-    }
-
-    private void initDrawingBuffer(Component component) {
-        try {
-            int status = VolatileImage.IMAGE_OK;
-            if (drawingBuffer == null || drawingBuffer.getWidth() != component.getWidth() || drawingBuffer.getHeight() != component.getHeight() || (status = drawingBuffer.validate(component.getGraphicsConfiguration())) != VolatileImage.IMAGE_OK) {
-                if (drawingBuffer != null && status == VolatileImage.IMAGE_OK) {
-                    // We think we have a good image, but it's not the right size.
-                    drawingBuffer.flush();
-                }
-                if (status != VolatileImage.IMAGE_RESTORED) {
-                    drawingBuffer = component.createVolatileImage(component.getWidth(), component.getHeight(), new ImageCapabilities(true));
-                }
-                // In any case, start the image over again.
-                drawnStepCount = 0;
-                Graphics2D bufferGraphics = drawingBuffer.createGraphics();
-                try {
-                    bufferGraphics.setColor(component.getBackground());
-                    bufferGraphics.fillRect(0, 0, component.getWidth(), component.getHeight());
-                } finally {
-                    bufferGraphics.dispose();
-                }
-            }
-        } catch (Exception e) {
-            Thrower.throwAny(e);
-        }
-    }
-
-    private void initGraphics(Graphics2D g, int width, int height) {
-        g.translate(0.5 * width, 0.5 * height);
-        double base = Math.min(width, height);
-        g.scale(base / 1850, base / -1850);
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
     }
 
     private void move(double distance, boolean penDown) {
@@ -198,6 +165,39 @@ public class TurtleEngine implements Engine, Tuga {
         } finally {
             g.dispose();
         }
+    }
+
+    private void initDrawingBuffer(Component component) {
+        try {
+            int status = VolatileImage.IMAGE_OK;
+            if (drawingBuffer == null || drawingBuffer.getWidth() != component.getWidth() || drawingBuffer.getHeight() != component.getHeight() || (status = drawingBuffer.validate(component.getGraphicsConfiguration())) != VolatileImage.IMAGE_OK) {
+                if (drawingBuffer != null && status == VolatileImage.IMAGE_OK) {
+                    // We think we have a good image, but it's not the right size.
+                    drawingBuffer.flush();
+                }
+                if (status != VolatileImage.IMAGE_RESTORED) {
+                    drawingBuffer = component.createVolatileImage(component.getWidth(), component.getHeight(), new ImageCapabilities(true));
+                }
+                // In any case, start the image over again.
+                drawnStepCount = 0;
+                Graphics2D bufferGraphics = drawingBuffer.createGraphics();
+                try {
+                    bufferGraphics.setColor(component.getBackground());
+                    bufferGraphics.fillRect(0, 0, component.getWidth(), component.getHeight());
+                } finally {
+                    bufferGraphics.dispose();
+                }
+            }
+        } catch (Exception e) {
+            Thrower.throwAny(e);
+        }
+    }
+
+    private void initGraphics(Graphics2D g, int width, int height) {
+        g.translate(0.5 * width, 0.5 * height);
+        double base = Math.min(width, height);
+        g.scale(base / 1850, base / -1850);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
     }
 
     private void paintTurtle(Graphics2D g) {
