@@ -54,25 +54,10 @@ public class RubyScriptRunner implements ScriptRunner {
         engine.put("$tuga", tuga);
 
         // Colors
-        engine.eval("def aqua; [0, 100, 100] end");
-        engine.eval("def black; [0, 0, 0] end");
-        engine.eval("def blue; [0, 0, 100] end");
-        engine.eval("def brown; [74, 56, 56] end"); // "saddlebrown" by CSS 3 specs - their brown is very red and dark.
-        engine.eval("def gray; [50, 50, 50] end");
-        engine.eval("def green; [0, 50, 0] end");
-        engine.eval("def fuschia; [100, 0, 100] end");
-        engine.eval("def lime; [0, 100, 0] end");
-        engine.eval("def maroon; [50, 0, 0] end");
-        engine.eval("def navy; [0, 0, 50] end");
-        engine.eval("def olive; [50, 50, 0] end");
-        engine.eval("def orange; [100, 65, 0] end");
-        engine.eval("def purple; [50, 0, 50] end");
-        engine.eval("def red; [100, 0, 0] end");
-        engine.eval("def silver; [75, 75, 75] end");
-        engine.eval("def tan; [82, 71, 55] end");
-        engine.eval("def teal; [0, 50, 50] end");
-        engine.eval("def white; [100, 100, 100] end");
-        engine.eval("def yellow; [100, 100, 0] end");
+        for (NamedColor color : Colors.COLORS) {
+            engine.put(color.name, color.rgb());
+        }
+
         // Directions
         engine.eval("def around; 180 end");
         engine.eval("def left; 90 end");
