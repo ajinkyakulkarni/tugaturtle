@@ -6,7 +6,7 @@ import javax.swing.*;
 
 public class ProgramsTab {
 
-    public List<AbstractButton> buttons = new ArrayList<AbstractButton>();
+    public List<AbstractButton> buttons = new ArrayList<>();
 
     public String group;
 

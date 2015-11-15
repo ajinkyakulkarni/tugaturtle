@@ -60,7 +60,7 @@ public class Program {
     }
 
     public void endAction() {
-		// TODO Commit the inserts and removes as a single action now.
+        // TODO Commit the inserts and removes as a single action now.
         // For instance, select&type would delete and remove in a single action.
         // TODO Ideally an I18N name would be provided to represent the action
         // (with changed text data).
@@ -115,20 +115,16 @@ public class Program {
         library.updateGroup(this);
     }
 
+    @Override
     public String toString() {
         return name;
     }
 
     private void writeFile() {
-        try {
-            Writer writer = new OutputStreamWriter(
-                    new FileOutputStream(file),
-                    Library.CHARSET);
-            try {
-                writer.write(content);
-            } finally {
-                writer.close();
-            }
+        try (Writer writer = new OutputStreamWriter(
+                new FileOutputStream(file),
+                Library.CHARSET)) {
+            writer.write(content);
         } catch (Exception e) {
             Thrower.throwAny(e);
         }

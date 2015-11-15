@@ -78,6 +78,7 @@ public class MainUi implements RunListener, Runnable {
 
             private static final long serialVersionUID = 1815382581283574623L;
 
+            @Override
             protected void paintComponent(Graphics graphics) {
                 engine.paintCanvas(this, graphics);
             }
@@ -96,6 +97,7 @@ public class MainUi implements RunListener, Runnable {
         JPanel devArea = new JPanel(devAreaLayout);
         JPanel toolBar = new JPanel(new GridLayout(1, 2, 3, 3));
         toolBar.add(createButton("Reset", new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent event) {
                 synchronized (this) {
                     if (running) {
@@ -109,6 +111,7 @@ public class MainUi implements RunListener, Runnable {
             }
         }));
         toolBar.add(goButton = createButton(GO_TEXT, new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent event) {
                 runProgram();
             }
@@ -117,10 +120,12 @@ public class MainUi implements RunListener, Runnable {
         textArea = new TextEditor();
         textArea.getDocument().addDocumentListener(new DocumentListener() {
 
+            @Override
             public void changedUpdate(DocumentEvent event) {
                 // TODO Who cares.
             }
 
+            @Override
             public void insertUpdate(DocumentEvent event) {
                 try {
                     if (ignoreUpdate) {
@@ -134,6 +139,7 @@ public class MainUi implements RunListener, Runnable {
                 }
             }
 
+            @Override
             public void removeUpdate(DocumentEvent event) {
                 try {
                     if (ignoreUpdate) {
@@ -174,6 +180,7 @@ public class MainUi implements RunListener, Runnable {
         final JButton programsButton = new JButton("Programs...");
         programsButton.setOpaque(false);
         programsButton.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent event) {
                 if (programsDialog.isVisible()) {
                     programsDialog.setVisible(false);
@@ -196,9 +203,11 @@ public class MainUi implements RunListener, Runnable {
         return topBar;
     }
 
+    @Override
     public void onStep() {
         try {
             SwingUtilities.invokeAndWait(new Runnable() {
+                @Override
                 public void run() {
                     canvas.repaint();
                 }
@@ -209,6 +218,7 @@ public class MainUi implements RunListener, Runnable {
         }
     }
 
+    @Override
     public void run() {
         engine.setListener(this);
         frame = new JFrame(title);
@@ -247,6 +257,7 @@ public class MainUi implements RunListener, Runnable {
             running = true;
         }
         new Thread() {
+            @Override
             public void run() {
                 Exception failure = null;
                 try {
@@ -265,6 +276,7 @@ public class MainUi implements RunListener, Runnable {
                     }
                     final Exception finalFailure = failure;
                     SwingUtilities.invokeLater(new Runnable() {
+                        @Override
                         public void run() {
                             goButton.setText(GO_TEXT);
                             canvas.repaint();

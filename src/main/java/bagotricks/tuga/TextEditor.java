@@ -12,6 +12,7 @@ public class TextEditor extends JTextArea {
         setTabSize(2);
         addKeyListener(new KeyListener() {
 
+            @Override
             public void keyPressed(KeyEvent event) {
                 if (event.getKeyCode() == KeyEvent.VK_TAB) {
                     if ((event.getModifiersEx() & KeyEvent.SHIFT_DOWN_MASK) == 0) {
@@ -23,10 +24,12 @@ public class TextEditor extends JTextArea {
                 }
             }
 
+            @Override
             public void keyReleased(KeyEvent event) {
                 // TODO Auto-generated method stub
             }
 
+            @Override
             public void keyTyped(KeyEvent event) {
                 // TODO Auto-generated method stub
             }
@@ -34,14 +37,17 @@ public class TextEditor extends JTextArea {
         });
         getDocument().addDocumentListener(new DocumentListener() {
 
+            @Override
             public void changedUpdate(DocumentEvent event) {
                 // TODO Auto-generated method stub
             }
 
+            @Override
             public void insertUpdate(DocumentEvent event) {
                 checkIndent(event.getOffset(), textAt(event.getOffset(), event.getLength()));
             }
 
+            @Override
             public void removeUpdate(DocumentEvent event) {
                 // TODO Auto-generated method stub
             }
@@ -64,6 +70,7 @@ public class TextEditor extends JTextArea {
                 }
             }
             SwingUtilities.invokeLater(new Runnable() {
+                @Override
                 public void run() {
                     insert(indent.toString(), offset + text.length());
                 }
@@ -89,6 +96,7 @@ public class TextEditor extends JTextArea {
         int end = getSelectionEnd();
         final List<Integer> lineStarts = findLineStarts(start, end);
         SwingUtilities.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 int pad = 0;
                 for (int lineStart : lineStarts) {
@@ -129,6 +137,7 @@ public class TextEditor extends JTextArea {
         final int end = getSelectionEnd();
         final List<Integer> lineStarts = findLineStarts(start, end);
         SwingUtilities.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 int pad = 0;
                 for (int lineStart : lineStarts) {
@@ -144,7 +153,7 @@ public class TextEditor extends JTextArea {
     }
 
     private List<Integer> findLineStarts(int start, int end) {
-        final List<Integer> lineStarts = new ArrayList<Integer>();
+        final List<Integer> lineStarts = new ArrayList<>();
         lineStarts.add(findIndexOfLineStart(start));
         Integer nextLineStart = start;
         while (true) {

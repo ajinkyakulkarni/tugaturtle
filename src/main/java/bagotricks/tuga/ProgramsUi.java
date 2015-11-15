@@ -24,20 +24,20 @@ public class ProgramsUi {
 
     Library library;
 
-    private MainUi main;
+    private final MainUi main;
 
     private ProgramsTab myProgramsTab;
 
     private JTabbedPane tabbedPane;
 
-    private Map<String, ProgramsTab> tabs;
+    private final Map<String, ProgramsTab> tabs;
 
     private ProgramsTab trashTab;
 
     public ProgramsUi(MainUi main) {
         this.main = main;
         library = new Library(main.id, main.examples, main.firstContent);
-        tabs = new HashMap<String, ProgramsTab>();
+        tabs = new HashMap<>();
         createProgramsDialog();
     }
 
@@ -78,6 +78,7 @@ public class ProgramsUi {
         tab.panel.add(new JScrollPane(tab.listComponent), BorderLayout.CENTER);
         tabbedPane.addTab(text, tab.panel);
         tab.listComponent.addListSelectionListener(new ListSelectionListener() {
+            @Override
             public void valueChanged(ListSelectionEvent event) {
                 Program selectedProgram = (Program) tab.listComponent.getSelectedValue();
                 if (selectedProgram != null) {
@@ -102,6 +103,7 @@ public class ProgramsUi {
     private void createExamplesTab() {
         examplesTab = addProgramsTab("Examples", ProgramGroup.EXAMPLES);
         addPanelButton(examplesTab, BorderLayout.SOUTH, main.createButton("Copy to My Programs", new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent event) {
                 activeTab = null;
                 copyProgram();
@@ -113,6 +115,7 @@ public class ProgramsUi {
         myProgramsTab = addProgramsTab("My Programs", ProgramGroup.MY_PROGRAMS);
         JPanel buttonBar = new JPanel(new GridLayout(1, 4, 3, 3));
         addButton(myProgramsTab, buttonBar, main.createButton("Rename", new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent event) {
                 JOptionPane optionPane = new JOptionPane();
                 optionPane.setMessageType(JOptionPane.QUESTION_MESSAGE);
@@ -131,21 +134,24 @@ public class ProgramsUi {
             }
         }));
         addButton(myProgramsTab, buttonBar, main.createButton("New", new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent event) {
                 main.setProgram(library.newProgram());
                 updateProgramLists();
             }
         }));
         addButton(myProgramsTab, buttonBar, main.createButton("Copy", new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent event) {
                 copyProgram();
             }
         }));
         addButton(myProgramsTab, buttonBar, main.createButton("Delete", new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent event) {
                 int index = myProgramsTab.listModel.indexOf(main.program);
                 if (index == myProgramsTab.listModel.getSize() - 1) {
-					// It was the last program, so select the previous
+                    // It was the last program, so select the previous
                     // instead of the next.
                     index--;
                 }
@@ -168,12 +174,14 @@ public class ProgramsUi {
     private void createProgramsDialog() {
         dialog = new JDialog(main.frame, "Programs", false);
         dialog.addComponentListener(new ComponentAdapter() {
+            @Override
             public void componentMoved(ComponentEvent event) {
                 if (dialogBeenShown) {
                     dialogBeenMoved = true;
                 }
             }
 
+            @Override
             public void componentShown(ComponentEvent event) {
                 dialogBeenShown = true;
             }
@@ -191,6 +199,7 @@ public class ProgramsUi {
     private void createTrashTab() {
         trashTab = addProgramsTab("Trash", ProgramGroup.TRASH);
         addPanelButton(trashTab, BorderLayout.SOUTH, main.createButton("Move Back to My Programs", new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent event) {
                 main.program.setGroup(ProgramGroup.MY_PROGRAMS);
                 activeTab = null;
@@ -220,7 +229,7 @@ public class ProgramsUi {
 
     private void updateTabList(ProgramsTab tab) {
         tab.listModel.clear();
-        List<String> names = new ArrayList<String>(library.getGroupPrograms(tab.group).keySet());
+        List<String> names = new ArrayList<>(library.getGroupPrograms(tab.group).keySet());
         for (String name : names) {
             tab.listModel.addElement(library.getProgramByNameAndGroup(tab.group, name));
         }

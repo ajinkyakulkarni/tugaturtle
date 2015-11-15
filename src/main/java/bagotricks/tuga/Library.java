@@ -40,38 +40,35 @@ public class Library {
 
     public static String readAll(InputStream input) {
         try {
-            Reader reader = new InputStreamReader(input, CHARSET);
-            try {
-                StringBuffer buffer = new StringBuffer();
+            try (Reader reader = new InputStreamReader(input, CHARSET)) {
+                StringBuilder buffer = new StringBuilder();
                 char[] chars = new char[4096];
                 int count;
                 while ((count = reader.read(chars)) >= 0) {
                     buffer.append(chars, 0, count);
                 }
                 return buffer.toString();
-            } finally {
-                reader.close();
             }
         } catch (Exception e) {
             throw Thrower.throwAny(e);
         }
     }
 
-    private File directory;
+    private final File directory;
 
     private List<Program> examples;
 
-    private String firstContent;
+    private final String firstContent;
 
-    private File infoFile;
+    private final File infoFile;
 
     private Program mostRecentProgram;
 
-    private Map<String, Map<String, String>> programGroupToNameToId;
+    private final Map<String, Map<String, String>> programGroupToNameToId;
 
-    private Map<String, Program> programIdToProgram;
+    private final Map<String, Program> programIdToProgram;
 
-    private File programsDirectory;
+    private final File programsDirectory;
 
     private Properties properties;
 
@@ -86,11 +83,11 @@ public class Library {
         }
         programsDirectory = new File(directory, "Programs");
         infoFile = new File(directory, "tuga.properties");
-        programGroupToNameToId = new TreeMap<String, Map<String, String>>();
+        programGroupToNameToId = new TreeMap<>();
         initGroup(ProgramGroup.EXAMPLES);
         initGroup(ProgramGroup.MY_PROGRAMS);
         initGroup(ProgramGroup.TRASH);
-        programIdToProgram = new TreeMap<String, Program>();
+        programIdToProgram = new TreeMap<>();
         System.out.println(this.directory.getAbsolutePath());
         setExamples(examples);
         update();
@@ -129,11 +126,12 @@ public class Library {
     }
 
     public Set<String> getProgramsIds(String group) {
-        return new TreeSet<String>(getGroupPrograms(group).values());
+        return new TreeSet<>(getGroupPrograms(group).values());
     }
 
     private void initGroup(String group) {
         programGroupToNameToId.put(group, new TreeMap<String, String>(new Comparator<String>() {
+            @Override
             public int compare(String name1, String name2) {
                 return Program.compareNames(name1, name2);
             }
@@ -141,13 +139,8 @@ public class Library {
     }
 
     private void loadProperties() {
-        try {
-            FileInputStream in = new FileInputStream(infoFile);
-            try {
-                properties.load(in);
-            } finally {
-                in.close();
-            }
+        try (FileInputStream in = new FileInputStream(infoFile)) {
+            properties.load(in);
         } catch (Exception e) {
             Thrower.throwAny(e);
         }
@@ -256,7 +249,7 @@ public class Library {
         }
         programIdToProgram.clear();
         for (Iterator<?> e = properties.entrySet().iterator(); e.hasNext();) {
-			// TODO Should I instead be looping on the program files
+            // TODO Should I instead be looping on the program files
             // themselves?
             Map.Entry<?, ?> entry = (Map.Entry) e.next();
             String key = (String) entry.getKey();
