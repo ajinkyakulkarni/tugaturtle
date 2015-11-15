@@ -2,6 +2,6 @@ package bagotricks.tuga;
 
 public interface RenameListener {
 
-	void renameTo(String name);
+    void renameTo(String name);
 
 }

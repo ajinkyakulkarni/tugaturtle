@@ -2,6 +2,6 @@ package bagotricks.tuga;
 
 public interface RunListener {
 
-	void onStep();
+    void onStep();
 
 }

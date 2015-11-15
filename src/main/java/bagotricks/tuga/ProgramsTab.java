@@ -6,14 +6,14 @@ import javax.swing.*;
 
 public class ProgramsTab {
 
-	public List<AbstractButton> buttons = new ArrayList<AbstractButton>();
+    public List<AbstractButton> buttons = new ArrayList<AbstractButton>();
 
-	public String group;
+    public String group;
 
-	public JList listComponent;
+    public JList listComponent;
 
-	public DefaultListModel listModel;
+    public DefaultListModel listModel;
 
-	public JPanel panel;
+    public JPanel panel;
 
 }
