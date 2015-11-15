@@ -67,7 +67,6 @@ public class Program {
 	}
 
 	public void insertText(int index, String text) {
-		System.out.println("Inserted: " + index + ", " + text);
 		writeFile();
 		// TODO
 	}
@@ -88,7 +87,6 @@ public class Program {
 	}
 
 	public void removeText(int begin, int end) {
-		System.out.println("Removed: " + begin + ", " + end);
 		writeFile();
 		// TODO
 	}
