@@ -108,6 +108,7 @@ public class TurtleEngineTest {
 
     private Drawing run(String script) {
         TurtleEngine instance = new TurtleEngine();
+        instance.init();
         instance.execute("", script);
         Drawing drawing = instance.getDrawing();
         return drawing;
