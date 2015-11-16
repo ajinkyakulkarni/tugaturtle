@@ -1,6 +1,6 @@
 package bagotricks.tuga;
 
-public class ProgramGroup {
+public interface ProgramGroup {
 
     public static final String EXAMPLES = "EXAMPLES";
 
