@@ -239,9 +239,8 @@ public class MainUi implements RunListener, Runnable {
         contentPane.add(splitPane, BorderLayout.CENTER);
         frame.setContentPane(contentPane);
         frame.pack();
-        program = programsUi.library.getMostRecentProgram();
+        setProgram(programsUi.library.getMostRecentProgram());
         programsUi.updateProgramLists();
-        updateProgramContent();
         textArea.requestFocus();
         frame.setVisible(true);
     }
