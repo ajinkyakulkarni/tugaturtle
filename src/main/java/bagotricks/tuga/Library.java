@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.math.BigInteger;
 import java.nio.charset.Charset;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -19,6 +20,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Library {
+
+    private static final Pattern NAME_PATTERN = Pattern
+            .compile("(.+?)(?: (\\d+))?");
 
     private static final String _PROGRAM_PREFIX = "program_";
 
@@ -106,14 +110,13 @@ public class Library {
         if (program == null) {
             File file = new File(this.programsDirectory, id + ".rb");
             program = new Program();
-            program.content = readAll(file);
-            program.id = id;
-            program.file = file;
-            program.group = properties.getProperty(
+            program.setContent(readAll(file));
+            program.setId(id);
+            program.setFile(file);
+            program.setGroup(properties.getProperty(
                     id + GROUP_SUFFIX,
-                    ProgramGroup.MY_PROGRAMS);
-            program.library = this;
-            program.name = properties.getProperty(id + NAME_SUFFIX);
+                    ProgramGroup.MY_PROGRAMS));
+            program.setName(properties.getProperty(id + NAME_SUFFIX));
             programIdToProgram.put(id, program);
         }
         return program;
@@ -130,12 +133,7 @@ public class Library {
     }
 
     private void initGroup(String group) {
-        programGroupToNameToId.put(group, new TreeMap<String, String>(new Comparator<String>() {
-            @Override
-            public int compare(String name1, String name2) {
-                return Program.compareNames(name1, name2);
-            }
-        }));
+        programGroupToNameToId.put(group, new TreeMap<String, String>(new NameComparator()));
     }
 
     private void loadProperties() {
@@ -161,21 +159,22 @@ public class Library {
                     PROGRAM_COUNT,
                     "0"));
             Program program = new Program();
-            program.content = "";
-            program.group = ProgramGroup.MY_PROGRAMS;
-            program.library = this;
+            program.setContent("");
+            program.setGroup(ProgramGroup.MY_PROGRAMS);
             while (true) {
                 programCount++;
-                program.id = PROGRAM_PREFIX + programCount;
-                program.file = new File(programsDirectory, program.id + ".rb");
-                if (program.file.createNewFile()) {
+                String id = PROGRAM_PREFIX + programCount;
+                File file = new File(programsDirectory, id + ".rb");
+                if (file.createNewFile()) {
+                    program.setId(id);
+                    program.setFile(file);
                     break;
                 }
             }
-            program.name = "Program " + programCount;
+            program.setName("Program " + programCount);
             properties.setProperty(PROGRAM_COUNT, String.valueOf(programCount));
-            properties.setProperty(program.id + GROUP_SUFFIX, program.group);
-            properties.setProperty(program.id + NAME_SUFFIX, program.name);
+            properties.setProperty(program.getId() + GROUP_SUFFIX, program.getGroup());
+            properties.setProperty(program.getId() + NAME_SUFFIX, program.getName());
             storeAndUpdate();
             return program;
         } catch (Exception e) {
@@ -196,13 +195,13 @@ public class Library {
         this.examples = examples;
         Map<String, String> examplesNameToId = getGroupPrograms(ProgramGroup.EXAMPLES);
         for (Program program : examples) {
-            programIdToProgram.put(program.id, program);
-            examplesNameToId.put(program.name, program.id);
+            programIdToProgram.put(program.getId(), program);
+            examplesNameToId.put(program.getName(), program.getId());
         }
     }
 
     public void setMostRecentProgram(Program program) {
-        properties.setProperty(MOST_RECENT_PROGRAM, program.id);
+        properties.setProperty(MOST_RECENT_PROGRAM, program.getId());
         storeAndUpdate();
     }
 
@@ -241,9 +240,9 @@ public class Library {
                         .get(MOST_RECENT_PROGRAM));
             } else {
                 Program program = newProgram();
-                properties.setProperty(MOST_RECENT_PROGRAM, program.id);
+                properties.setProperty(MOST_RECENT_PROGRAM, program.getId());
                 mostRecentProgram = program;
-                program.setContent(firstContent);
+                program.writeContent(firstContent);
                 storeProperties();
             }
         }
@@ -262,19 +261,83 @@ public class Library {
             }
         }
         for (Program example : examples) {
-            programIdToProgram.put(example.id, example);
+            programIdToProgram.put(example.getId(), example);
         }
         programGroupToNameToId.get(ProgramGroup.MY_PROGRAMS).clear();
         programGroupToNameToId.get(ProgramGroup.TRASH).clear();
         for (Program program : programIdToProgram.values()) {
-            Map<String, String> group = programGroupToNameToId.get(program.group);
-            group.put(program.name, program.id);
+            Map<String, String> group = programGroupToNameToId.get(program.getGroup());
+            group.put(program.getName(), program.getId());
         }
     }
 
-    void updateGroup(Program program) {
-        properties.setProperty(program.id + GROUP_SUFFIX, program.group);
+    public void updateGroup(Program program, String group) {
+        String name = program.getName();
+        if (getProgramByNameAndGroup(group, name) != null) {
+            String newName = pickSimilarName(getGroupPrograms(group), name);
+            program.setName(newName);
+            setProgramName(program.getId(), newName);
+        }
+        program.setGroup(group);
+        properties.setProperty(program.getId() + GROUP_SUFFIX, program.getGroup());
         storeAndUpdate();
+    }
+
+    /**
+     * Renames the program. If another program in this group already has the
+     * wantedName, it is given a number to make it unique.
+     */
+    public void rename(Program program, String wantedName) {
+        Map<String, String> programs = getGroupPrograms(program.getGroup());
+        String newName = pickSimilarName(programs, wantedName);
+        setProgramName(program.getId(), newName);
+    }
+
+    private String pickSimilarName(Map<String, String> programs, String wantedName) {
+        if (programs.containsKey(wantedName)) {
+            Matcher matcher = nameMatcher(wantedName);
+            String mainName = matcher.group(1);
+            String numberString = matcher.group(2);
+            BigInteger number = numberString != null ? new BigInteger(
+                    numberString) : BigInteger.ONE;
+            do {
+                number = number.add(BigInteger.ONE);
+                wantedName = mainName + " " + number;
+            } while (programs.containsKey(wantedName));
+        }
+        return wantedName;
+    }
+
+    /**
+     * A quick hack for sorting while understanding trailing numbers. Better
+     * would be a more general solution as has been implemented by some people.
+     */
+    public static class NameComparator implements Comparator<String> {
+
+        @Override
+        public int compare(String name1, String name2) {
+            Matcher matcher1 = nameMatcher(name1);
+            Matcher matcher2 = nameMatcher(name2);
+            if (matcher1.group(1).equals(matcher2.group(1))) {
+                // Main names match. Check numbers.
+                String number1 = matcher1.group(2);
+                String number2 = matcher2.group(2);
+                if (number1 != null && number2 != null) {
+                    // Both are numbers, so compare them.F
+                    return new BigInteger(number1)
+                            .compareTo(new BigInteger(number2));
+                }
+            }
+            return name1.compareTo(name2);
+        }
+    }
+
+    private static Matcher nameMatcher(String name) {
+        Matcher matcher = NAME_PATTERN.matcher(name);
+        if (!matcher.matches()) {
+            throw new RuntimeException("doesn't match???: " + name);
+        }
+        return matcher;
     }
 
 }

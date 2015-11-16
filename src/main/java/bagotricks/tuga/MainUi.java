@@ -132,7 +132,7 @@ public class MainUi implements RunListener, Runnable {
                         return;
                     }
                     String text = textArea.getText(event.getOffset(), event.getLength());
-                    program.content = textArea.getText(); // TODO Remove line
+                    program.setContent(textArea.getText()); // TODO Remove line
                     program.insertText(event.getOffset(), text);
                 } catch (Exception e) {
                     Thrower.throwAny(e);
@@ -145,7 +145,7 @@ public class MainUi implements RunListener, Runnable {
                     if (ignoreUpdate) {
                         return;
                     }
-                    program.content = textArea.getText(); // TODO Remove line
+                    program.setContent(textArea.getText()); // TODO Remove line
                     program.removeText(event.getOffset(), event.getLength());
                 } catch (Exception e) {
                     Thrower.throwAny(e);
@@ -299,7 +299,7 @@ public class MainUi implements RunListener, Runnable {
     private void updateProgramContent() {
         ignoreUpdate = true;
         try {
-            textArea.setText(program.content);
+            textArea.setText(program.getContent());
             updateProgramStatus();
         } finally {
             ignoreUpdate = false;
@@ -307,11 +307,11 @@ public class MainUi implements RunListener, Runnable {
     }
 
     void updateProgramLabel() {
-        programLabel.setText(program.name);
+        programLabel.setText(program.getName());
     }
 
     void updateProgramStatus() {
-        textArea.setEditable(program.group.equals(ProgramGroup.MY_PROGRAMS));
+        textArea.setEditable(program.getGroup().equals(ProgramGroup.MY_PROGRAMS));
         textArea.setForeground(textArea.isEditable() ? SystemColor.textText : SystemColor.textInactiveText);
     }
 

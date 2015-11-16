@@ -94,8 +94,8 @@ public class ProgramsUi {
 
     private void copyProgram() {
         Program program = library.newProgram();
-        program.renameTo(main.program.name);
-        program.setContent(main.program.content);
+        library.rename(program, main.program.getName());
+        program.writeContent(main.program.getContent());
         main.setProgram(program);
         updateProgramLists();
     }
@@ -120,14 +120,14 @@ public class ProgramsUi {
                 JOptionPane optionPane = new JOptionPane();
                 optionPane.setMessageType(JOptionPane.QUESTION_MESSAGE);
                 optionPane.setMessage("Choose a name for this program:");
-                optionPane.setInitialSelectionValue(main.program.name);
+                optionPane.setInitialSelectionValue(main.program.getName());
                 optionPane.setWantsInput(true);
                 optionPane.setOptions(new Object[]{"OK"});
                 JDialog renameDialog = optionPane.createDialog(dialog, "Rename");
                 renameDialog.setVisible(true);
                 String name = (String) optionPane.getInputValue();
-                if ("OK".equals(optionPane.getValue()) && name != null && !name.trim().equals("") && !name.trim().equals(main.program.name)) {
-                    main.program.renameTo(name.trim());
+                if ("OK".equals(optionPane.getValue()) && name != null && !name.trim().equals("") && !name.trim().equals(main.program.getName())) {
+                    library.rename(main.program, name.trim());
                     main.updateProgramLabel();
                     updateProgramLists();
                 }
@@ -155,7 +155,7 @@ public class ProgramsUi {
                     // instead of the next.
                     index--;
                 }
-                main.program.setGroup(ProgramGroup.TRASH);
+                library.updateGroup(main.program, ProgramGroup.TRASH);
                 updateProgramLists();
                 Program nextProgram;
                 if (index < 0) {
@@ -201,7 +201,7 @@ public class ProgramsUi {
         addPanelButton(trashTab, BorderLayout.SOUTH, main.createButton("Move Back to My Programs", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                main.program.setGroup(ProgramGroup.MY_PROGRAMS);
+                library.updateGroup(main.program, ProgramGroup.MY_PROGRAMS);
                 activeTab = null;
                 updateProgramLists();
                 main.updateProgramLabel();
@@ -218,7 +218,7 @@ public class ProgramsUi {
         }
         if (activeTab == null) {
             // First time through.
-            ProgramsTab tab = tabs.get(main.program.group);
+            ProgramsTab tab = tabs.get(main.program.getGroup());
             tabbedPane.setSelectedComponent(tab.panel);
             activateTab(tab);
             tab.listComponent.requestFocus();
@@ -233,8 +233,8 @@ public class ProgramsUi {
         for (String name : names) {
             tab.listModel.addElement(library.getProgramByNameAndGroup(tab.group, name));
         }
-        if (tab.group.equals(main.program.group)) {
-            tab.listComponent.setSelectedIndex(names.indexOf(main.program.name));
+        if (tab.group.equals(main.program.getGroup())) {
+            tab.listComponent.setSelectedIndex(names.indexOf(main.program.getName()));
         }
     }
 
