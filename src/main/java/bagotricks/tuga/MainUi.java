@@ -176,7 +176,7 @@ public class MainUi implements RunListener, Runnable {
         toolBarLayout.setVgap(0);
         toolBar.setLayout(toolBarLayout);
         programsUi = new ProgramsUi(this);
-        final JDialog programsDialog = programsUi.dialog;
+        final JDialog programsDialog = programsUi.getDialog();
         final JButton programsButton = new JButton("Programs...");
         programsButton.setOpaque(false);
         programsButton.addActionListener(new ActionListener() {
@@ -186,7 +186,7 @@ public class MainUi implements RunListener, Runnable {
                     programsDialog.setVisible(false);
                     return;
                 }
-                if (!programsUi.dialogBeenMoved) {
+                if (!programsUi.hasDialogBeenMoved()) {
                     int right = programsButton.getX() + programsButton.getWidth();
                     int left = right - programsDialog.getWidth();
                     int buttonBottom = programsButton.getY() + programsButton.getHeight();
@@ -239,7 +239,7 @@ public class MainUi implements RunListener, Runnable {
         contentPane.add(splitPane, BorderLayout.CENTER);
         frame.setContentPane(contentPane);
         frame.pack();
-        setProgram(programsUi.library.getMostRecentProgram());
+        setProgram(programsUi.getLibrary().getMostRecentProgram());
         programsUi.updateProgramLists();
         textArea.requestFocus();
         frame.setVisible(true);
@@ -291,7 +291,7 @@ public class MainUi implements RunListener, Runnable {
 
     void setProgram(Program program) {
         this.program = program;
-        programsUi.library.setMostRecentProgram(program);
+        programsUi.getLibrary().setMostRecentProgram(program);
         updateProgramLabel();
         updateProgramContent();
     }

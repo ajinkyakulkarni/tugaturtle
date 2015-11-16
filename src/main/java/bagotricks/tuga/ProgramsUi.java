@@ -12,9 +12,9 @@ public class ProgramsUi {
 
     private ProgramsTab activeTab;
 
-    JDialog dialog;
+    private JDialog dialog;
 
-    boolean dialogBeenMoved;
+    private boolean dialogBeenMoved;
 
     private boolean dialogBeenShown;
 
@@ -22,7 +22,7 @@ public class ProgramsUi {
 
     private ProgramsTab examplesTab;
 
-    Library library;
+    private final Library library;
 
     private final MainUi main;
 
@@ -236,6 +236,18 @@ public class ProgramsUi {
         if (tab.group.equals(main.program.getGroup())) {
             tab.listComponent.setSelectedIndex(names.indexOf(main.program.getName()));
         }
+    }
+
+    public JDialog getDialog() {
+        return dialog;
+    }
+
+    public boolean hasDialogBeenMoved() {
+        return dialogBeenMoved;
+    }
+
+    public Library getLibrary() {
+        return library;
     }
 
 }
