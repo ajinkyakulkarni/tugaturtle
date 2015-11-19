@@ -2,6 +2,8 @@ package bagotricks.tuga;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.*;
 import java.util.List;
 
@@ -22,10 +24,6 @@ public class ProgramsUi {
 
     private ProgramsTab examplesTab;
 
-    private final Library library;
-
-    private final MainUi main;
-
     private ProgramsTab myProgramsTab;
 
     private JTabbedPane tabbedPane;
@@ -34,11 +32,12 @@ public class ProgramsUi {
 
     private ProgramsTab trashTab;
 
-    public ProgramsUi(MainUi main) {
-        this.main = main;
-        library = new Library(main.id, main.examples, main.firstContent);
+    private final Controller controller;
+    
+    public ProgramsUi(JFrame owner, Controller controller) {
+        this.controller = controller;
         tabs = new HashMap<>();
-        createProgramsDialog();
+        createProgramsDialog(owner);
     }
 
     private void activateTab(ProgramsTab tab) {
@@ -82,8 +81,8 @@ public class ProgramsUi {
             public void valueChanged(ListSelectionEvent event) {
                 Program selectedProgram = (Program) tab.listComponent.getSelectedValue();
                 if (selectedProgram != null) {
-                    if (selectedProgram != main.program) {
-                        main.setProgram(selectedProgram);
+                    if (selectedProgram != controller.getProgram()) {
+                        controller.setProgram(selectedProgram);
                     }
                     activateTab(tab);
                 }
@@ -92,21 +91,13 @@ public class ProgramsUi {
         return tab;
     }
 
-    private void copyProgram() {
-        Program program = library.newProgram();
-        library.rename(program, main.program.getName());
-        program.writeContent(main.program.getContent());
-        main.setProgram(program);
-        updateProgramLists();
-    }
-
     private void createExamplesTab() {
         examplesTab = addProgramsTab("Examples", ProgramGroup.EXAMPLES);
-        addPanelButton(examplesTab, BorderLayout.SOUTH, main.createButton("Copy to My Programs", new ActionListener() {
+        addPanelButton(examplesTab, BorderLayout.SOUTH, UI.createButton("Copy to My Programs", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 activeTab = null;
-                copyProgram();
+                controller.copyProgram();
             }
         }));
     }
@@ -114,65 +105,46 @@ public class ProgramsUi {
     private void createMyProgramsTab() {
         myProgramsTab = addProgramsTab("My Programs", ProgramGroup.MY_PROGRAMS);
         JPanel buttonBar = new JPanel(new GridLayout(1, 4, 3, 3));
-        addButton(myProgramsTab, buttonBar, main.createButton("Rename", new ActionListener() {
+        addButton(myProgramsTab, buttonBar, UI.createButton("Rename", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 JOptionPane optionPane = new JOptionPane();
                 optionPane.setMessageType(JOptionPane.QUESTION_MESSAGE);
                 optionPane.setMessage("Choose a name for this program:");
-                optionPane.setInitialSelectionValue(main.program.getName());
+                optionPane.setInitialSelectionValue(controller.getProgram().getName());
                 optionPane.setWantsInput(true);
                 optionPane.setOptions(new Object[]{"OK"});
                 JDialog renameDialog = optionPane.createDialog(dialog, "Rename");
                 renameDialog.setVisible(true);
                 String name = (String) optionPane.getInputValue();
-                if ("OK".equals(optionPane.getValue()) && name != null && !name.trim().equals("") && !name.trim().equals(main.program.getName())) {
-                    library.rename(main.program, name.trim());
-                    main.updateProgramLabel();
-                    updateProgramLists();
+                if ("OK".equals(optionPane.getValue()) && name != null && !name.trim().equals("") && !name.trim().equals(controller.getProgram().getName())) {
+                    controller.renameCurrent(name.trim());
                 }
             }
         }));
-        addButton(myProgramsTab, buttonBar, main.createButton("New", new ActionListener() {
+        addButton(myProgramsTab, buttonBar, UI.createButton("New", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                main.setProgram(library.newProgram());
-                updateProgramLists();
+                controller.newProgram();
             }
         }));
-        addButton(myProgramsTab, buttonBar, main.createButton("Copy", new ActionListener() {
+        addButton(myProgramsTab, buttonBar, UI.createButton("Copy", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                copyProgram();
+                controller.copyProgram();
             }
         }));
-        addButton(myProgramsTab, buttonBar, main.createButton("Delete", new ActionListener() {
+        addButton(myProgramsTab, buttonBar, UI.createButton("Delete", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                int index = myProgramsTab.listModel.indexOf(main.program);
-                if (index == myProgramsTab.listModel.getSize() - 1) {
-                    // It was the last program, so select the previous
-                    // instead of the next.
-                    index--;
-                }
-                library.updateGroup(main.program, ProgramGroup.TRASH);
-                updateProgramLists();
-                Program nextProgram;
-                if (index < 0) {
-                    // No programs left, so make a new one.
-                    nextProgram = library.newProgram();
-                } else {
-                    nextProgram = (Program) myProgramsTab.listModel.elementAt(index);
-                }
-                main.setProgram(nextProgram);
-                updateProgramLists();
+                controller.deleteProgram();
             }
         }));
         myProgramsTab.panel.add(buttonBar, BorderLayout.SOUTH);
     }
 
-    private void createProgramsDialog() {
-        dialog = new JDialog(main.frame, "Programs", false);
+    private void createProgramsDialog(JFrame owner) {
+        dialog = new JDialog(owner, "Programs", false);
         dialog.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentMoved(ComponentEvent event) {
@@ -194,18 +166,23 @@ public class ProgramsUi {
         contentPane.add(tabbedPane, BorderLayout.CENTER);
         dialog.setContentPane(contentPane);
         dialog.pack();
+        
+        controller.addPropertyChangeListener("programList", new PropertyChangeListener() {
+
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                updateProgramLists();
+            }
+        });
     }
 
     private void createTrashTab() {
         trashTab = addProgramsTab("Trash", ProgramGroup.TRASH);
-        addPanelButton(trashTab, BorderLayout.SOUTH, main.createButton("Move Back to My Programs", new ActionListener() {
+        addPanelButton(trashTab, BorderLayout.SOUTH, UI.createButton("Move Back to My Programs", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                library.updateGroup(main.program, ProgramGroup.MY_PROGRAMS);
+                controller.restoreProgram();
                 activeTab = null;
-                updateProgramLists();
-                main.updateProgramLabel();
-                main.updateProgramStatus();
             }
         }));
     }
@@ -218,7 +195,7 @@ public class ProgramsUi {
         }
         if (activeTab == null) {
             // First time through.
-            ProgramsTab tab = tabs.get(main.program.getGroup());
+            ProgramsTab tab = tabs.get(controller.getProgram().getGroup());
             tabbedPane.setSelectedComponent(tab.panel);
             activateTab(tab);
             tab.listComponent.requestFocus();
@@ -229,12 +206,12 @@ public class ProgramsUi {
 
     private void updateTabList(ProgramsTab tab) {
         tab.listModel.clear();
-        List<String> names = new ArrayList<>(library.getGroupPrograms(tab.group).keySet());
+        List<String> names = new ArrayList<>(controller.getLibrary().getGroupPrograms(tab.group).keySet());
         for (String name : names) {
-            tab.listModel.addElement(library.getProgramByNameAndGroup(tab.group, name));
+            tab.listModel.addElement(controller.getLibrary().getProgramByNameAndGroup(tab.group, name));
         }
-        if (tab.group.equals(main.program.getGroup())) {
-            tab.listComponent.setSelectedIndex(names.indexOf(main.program.getName()));
+        if (tab.group.equals(controller.getProgram().getGroup())) {
+            tab.listComponent.setSelectedIndex(names.indexOf(controller.getProgram().getName()));
         }
     }
 
@@ -245,9 +222,4 @@ public class ProgramsUi {
     public boolean hasDialogBeenMoved() {
         return dialogBeenMoved;
     }
-
-    public Library getLibrary() {
-        return library;
-    }
-
 }

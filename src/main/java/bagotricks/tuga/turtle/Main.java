@@ -1,5 +1,8 @@
 package bagotricks.tuga.turtle;
 
+import bagotricks.tuga.Controller;
+import bagotricks.tuga.Engine;
+import bagotricks.tuga.Library;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
@@ -16,13 +19,15 @@ public class Main {
             } catch (Exception e) {
                 // TODO No system laf. Oh well.
             }
-            MainUi ui = new MainUi();
-            ui.firstContent = Examples.getContent("Angle Patterns");
-            ui.engine = new TurtleEngine();
-            ui.engine.init();
-            ui.examples = Examples.getAll();
+            
+            Library library = new Library("Tuga Turtle", Examples.getAll(), Examples.getContent("Angle Patterns"));
+            
+            Engine engine = new TurtleEngine();
+            engine.init();
+            Controller controller = new Controller(engine, library);
+            
+            MainUi ui = new MainUi(controller);
             ui.icon = ImageIO.read(Main.class.getResource("turtle128.png"));
-            ui.id = "Tuga Turtle";
             ui.title = "Tuga Turtle (from Bagotricks.com)";
             SwingUtilities.invokeAndWait(ui);
         } catch (Exception e) {

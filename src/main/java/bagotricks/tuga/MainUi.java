@@ -13,8 +13,8 @@ import java.awt.SystemColor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-import java.util.List;
-
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -37,25 +37,15 @@ public class MainUi implements RunListener, Runnable {
 
     private JComponent canvas;
 
-    public String firstContent;
-
     private boolean doReset;
 
-    public Engine engine;
-
-    public List<Program> examples;
-
-    JFrame frame;
+    private JFrame frame;
 
     private JButton goButton;
 
     public BufferedImage icon;
 
-    public String id;
-
     private boolean ignoreUpdate;
-
-    Program program;
 
     private JLabel programLabel;
 
@@ -67,10 +57,10 @@ public class MainUi implements RunListener, Runnable {
 
     public String title;
 
-    JButton createButton(String text, ActionListener listener) {
-        JButton button = new JButton(text);
-        button.addActionListener(listener);
-        return button;
+    private final Controller controller;
+
+    public MainUi(Controller controller) {
+        this.controller = controller;
     }
 
     private Component createCanvasArea() {
@@ -80,7 +70,7 @@ public class MainUi implements RunListener, Runnable {
 
             @Override
             protected void paintComponent(Graphics graphics) {
-                engine.paintCanvas(this, graphics);
+                controller.getEngine().paintCanvas(this, graphics);
             }
 
         };
@@ -96,21 +86,21 @@ public class MainUi implements RunListener, Runnable {
         devAreaLayout.setVgap(3);
         JPanel devArea = new JPanel(devAreaLayout);
         JPanel toolBar = new JPanel(new GridLayout(1, 2, 3, 3));
-        toolBar.add(createButton("Reset", new ActionListener() {
+        toolBar.add(UI.createButton("Reset", new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 synchronized (this) {
                     if (running) {
                         doReset = true;
-                        engine.stop();
+                        controller.getEngine().stop();
                         return;
                     }
                 }
-                engine.reset();
+                controller.getEngine().reset();
                 canvas.repaint();
             }
         }));
-        toolBar.add(goButton = createButton(GO_TEXT, new ActionListener() {
+        toolBar.add(goButton = UI.createButton(GO_TEXT, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 runProgram();
@@ -132,8 +122,8 @@ public class MainUi implements RunListener, Runnable {
                         return;
                     }
                     String text = textArea.getText(event.getOffset(), event.getLength());
-                    program.setContent(textArea.getText()); // TODO Remove line
-                    program.insertText(event.getOffset(), text);
+                    controller.getProgram().setContent(textArea.getText()); // TODO Remove line
+                    controller.getProgram().insertText(event.getOffset(), text);
                 } catch (Exception e) {
                     Thrower.throwAny(e);
                 }
@@ -145,8 +135,8 @@ public class MainUi implements RunListener, Runnable {
                     if (ignoreUpdate) {
                         return;
                     }
-                    program.setContent(textArea.getText()); // TODO Remove line
-                    program.removeText(event.getOffset(), event.getLength());
+                    controller.getProgram().setContent(textArea.getText()); // TODO Remove line
+                    controller.getProgram().removeText(event.getOffset(), event.getLength());
                 } catch (Exception e) {
                     Thrower.throwAny(e);
                 }
@@ -165,9 +155,20 @@ public class MainUi implements RunListener, Runnable {
         topBar.setBackground(new Color(0, 128, 0));
         topBar.setBorder(BorderFactory.createLineBorder(Color.BLACK));
         programLabel = new JLabel();
+        final JLabel pLabel = programLabel;
         programLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
         programLabel.setForeground(Color.WHITE);
         programLabel.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
+        controller.addPropertyChangeListener(new PropertyChangeListener() {
+
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                String newName = controller.getProgramName();
+                if (newName != null) {
+                    pLabel.setText(newName);
+                }
+            }
+        });
         topBar.add(programLabel, BorderLayout.CENTER);
         JPanel toolBar = new JPanel();
         toolBar.setOpaque(false);
@@ -175,7 +176,7 @@ public class MainUi implements RunListener, Runnable {
         toolBarLayout.setHgap(0);
         toolBarLayout.setVgap(0);
         toolBar.setLayout(toolBarLayout);
-        programsUi = new ProgramsUi(this);
+        programsUi = new ProgramsUi(frame, controller);
         final JDialog programsDialog = programsUi.getDialog();
         final JButton programsButton = new JButton("Programs...");
         programsButton.setOpaque(false);
@@ -220,7 +221,7 @@ public class MainUi implements RunListener, Runnable {
 
     @Override
     public void run() {
-        engine.setListener(this);
+        controller.getEngine().setListener(this);
         frame = new JFrame(title);
         if (icon != null) {
             frame.setIconImage(icon);
@@ -239,8 +240,20 @@ public class MainUi implements RunListener, Runnable {
         contentPane.add(splitPane, BorderLayout.CENTER);
         frame.setContentPane(contentPane);
         frame.pack();
-        setProgram(programsUi.getLibrary().getMostRecentProgram());
+        
+        
+        controller.addPropertyChangeListener("program", new PropertyChangeListener() {
+
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                updateProgramContent();
+            }
+        });
+
+        // TODO move out of UI to controller?
+        controller.setProgram(controller.getLibrary().getMostRecentProgram());
         programsUi.updateProgramLists();
+
         textArea.requestFocus();
         frame.setVisible(true);
     }
@@ -248,7 +261,7 @@ public class MainUi implements RunListener, Runnable {
     private void runProgram() {
         synchronized (this) {
             if (running) {
-                goButton.setText(engine.togglePause() ? "Continue" : "Pause");
+                goButton.setText(controller.getEngine().togglePause() ? "Continue" : "Pause");
                 return;
             } else {
                 goButton.setText("Pause");
@@ -260,7 +273,7 @@ public class MainUi implements RunListener, Runnable {
             public void run() {
                 Exception failure = null;
                 try {
-                    engine.execute("Current Program", textArea.getText());
+                    controller.getEngine().execute("Current Program", textArea.getText());
                 } catch (StopException e) {
                     // Requested by the user. Just ignore it.
                 } catch (Exception e) {
@@ -269,7 +282,7 @@ public class MainUi implements RunListener, Runnable {
                     synchronized (this) {
                         running = false;
                         if (doReset) {
-                            engine.reset();
+                            controller.getEngine().reset();
                             doReset = false;
                         }
                     }
@@ -289,30 +302,23 @@ public class MainUi implements RunListener, Runnable {
         }.start();
     }
 
-    void setProgram(Program program) {
-        this.program = program;
-        programsUi.getLibrary().setMostRecentProgram(program);
-        updateProgramLabel();
-        updateProgramContent();
-    }
-
     private void updateProgramContent() {
         ignoreUpdate = true;
         try {
-            textArea.setText(program.getContent());
+            textArea.setText(controller.getProgram().getContent());
             updateProgramStatus();
         } finally {
             ignoreUpdate = false;
         }
     }
 
-    void updateProgramLabel() {
-        programLabel.setText(program.getName());
+    void updateProgramStatus() {
+        textArea.setEditable(controller.getProgram().getGroup().equals(ProgramGroup.MY_PROGRAMS));
+        textArea.setForeground(textArea.isEditable() ? SystemColor.textText : SystemColor.textInactiveText);
     }
 
-    void updateProgramStatus() {
-        textArea.setEditable(program.getGroup().equals(ProgramGroup.MY_PROGRAMS));
-        textArea.setForeground(textArea.isEditable() ? SystemColor.textText : SystemColor.textInactiveText);
+    public JFrame getFrame() {
+        return frame;
     }
 
 }
